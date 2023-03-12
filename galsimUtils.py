@@ -3,6 +3,8 @@ import os
 import numpy as np
 import pickle as pkl
 
+from collections import defaultdict
+
 class galsim_dnl_dataset():
     def __init__(self):#, ds_dict, n_shears):
         self.sigmas = defaultdict(dict) 
@@ -11,6 +13,33 @@ class galsim_dnl_dataset():
         self.g2s = defaultdict(dict) 
         self.centroid_xs = defaultdict(dict) 
         self.centroid_ys = defaultdict(dict) 
+
+def get_model_adc(): #plot_star_image
+
+    dataset_file = '/home/r/rejnicho/analysis/adc/datasets/dnl/13144_R22_S00_dnl_dataset.pkl'
+    amp = 'C00'
+    with open(dataset_file, 'rb') as f:
+        ds = pkl.load(f)
+
+    adc = ds.adcs[amp]
+    adc.dnl -= adc.dnl.mean()
+    adc.make_bin_edges()
+    bins = replace_nanbin_edges(adc)
+    bin_diff = bins[1:] - bins[:-1]
+    return bins 
+
+def replace_nanbin_edges(adc):
+    seed = 1352
+    rng = np.random.default_rng(seed) 
+    std = adc.dnl.std()
+    x = np.arange(2**18 +1).astype(np.float64) #x locations of all the bin edges
+    nanmask = np.isnan(adc.edges) #nan bin edges boolean array (no data)
+    nNan = len(adc.edges[nanmask]) #how many bin edges undetermined (nan) 
+    vals = rng.standard_normal(nNan)*std 
+    x[nanmask] += vals
+    adc.edges[nanmask] = x[nanmask]
+
+    return adc.edges
 
 def make_blank_image(flux, g1, g2, seed=None):
     # random seed
@@ -38,31 +67,38 @@ def make_blank_image(flux, g1, g2, seed=None):
     return blank_image, prof
 
 def plot_star_image(imDict, inshear, influx, im_num):
-    im_arr = imDict[inshear][influx][im_num]
+    im_arr = im_dict[inshear][influx][im_num]
 
     # DNL bins
-    dnl_bins = make_dnl_bins()
-    pedestal = 2**8
+    dnl_bins = get_model_adc()
+    #ideal adc 
+    star_image = galsim.Image(np.floor(im_arr), dtype=int, xmin=0, ymin=0) 
 
-    star_image = galsim.Image(np.floor(im_arr), dtype=int, xmin=0, ymin=0)
-    adc_image = make_adc_image(im_arr, pedestal, dnl_bins)
-    f, axs = plt.subplots(1, 3, figsize=(33, 11))
+    #realistic adc 
+    adc_image = make_adc_image(im_arr, dnl_bins) #ISSUE IS HERE, with the function 
+    f, axs = plt.subplots(1, 3, figsize=(21,9))
     star_moments = star_image.FindAdaptiveMom(weight=None, strict=False)
     adc_moments = adc_image.FindAdaptiveMom(weight=None, strict=False)
-
-    diff = star_image.array - adc_image.array
- 
+    diff = star_image - adc_image
     im0 = axs[0].imshow(star_image.array, origin='lower', interpolation='None')
+
+    #issue 
     im1 = axs[1].imshow(adc_image.array, origin='lower', interpolation='None')
-    im2 = axs[2].imshow(diff, origin='lower', interpolation='None')
-    axs[0].set_title('Ideal', fontsize=18)
-    axs[1].set_title('DNL', fontsize=18)
-    axs[2].set_title('Difference', fontsize=18)
-    f.colorbar(im0, ax=axs[0], pad=0.2, orientation='horizontal')
-    f.colorbar(im1, ax=axs[1], pad=0.2, orientation='horizontal')
-    f.colorbar(im2, ax=axs[2], pad=0.2, orientation='horizontal')
-    f.suptitle('Digitized Galaxy Images', fontsize=26)
-    f.savefig('analysis/adc/plots/galsim/galaxies.png')
+    im2 = axs[2].imshow(diff.array, origin='lower', interpolation='None')
+    axs[0].set_title('Ideal', fontsize=28)
+    axs[1].set_title('DNL', fontsize=28)
+    axs[2].set_title('Difference', fontsize=28)
+
+    for ax, im in zip(axs.ravel(), [im0, im1, im2]):
+        ax.tick_params(labelsize=20)
+        cbar = f.colorbar(im, ax=ax, shrink=0.5)
+        cbar.ax.tick_params(labelsize=24)
+
+    f.suptitle('Digitized Galaxy Images', fontsize=30)
+    f.tight_layout()
+    filename = os.path.join(os.path.expanduser('~'), 'analysis/adc/plots/galsim/galaxy_new.png')
+    f.savefig(filename)
+    plt.show()
 
 def write_star_images(input_fluxes, input_shears, n_ims=500):
     imDict = defaultdict(dict)
