@@ -14,7 +14,7 @@ class galsim_dnl_dataset():
         self.centroid_xs = defaultdict(dict) 
         self.centroid_ys = defaultdict(dict) 
 
-def get_model_adc(): #plot_star_image
+def get_model_adc():
     dataset_file = '/home/r/rejnicho/analysis/adc/datasets/dnl/13144_R22_S00_dnl_dataset.pkl'
     amp = 'C00'
     with open(dataset_file, 'rb') as f:
