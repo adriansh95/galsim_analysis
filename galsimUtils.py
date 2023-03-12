@@ -21,6 +21,7 @@ def get_model_adc(): #plot_star_image
         ds = pkl.load(f)
 
     adc = ds.adcs[amp]
+    # Correct biased dnl measurements
     adc.dnl -= adc.dnl.mean()
     adc.make_bin_edges()
     bins = replace_nanbin_edges(adc)

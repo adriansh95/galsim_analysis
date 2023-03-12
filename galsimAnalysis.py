@@ -9,7 +9,7 @@ from galsimUtils import *
 input_fluxes = [5000]
 input_shears = [(0, 0)]
 write_star_images(input_fluxes, input_shears, n_ims=1)
-fName = 'analysis/adc/datasets/galsim/star_images/star_images.pkl'
+fName = '/home/r/rejnicho/analysis/adc/galsim_images/star_images.pkl'
 
 with open(fName, 'rb') as f:
     im_dict = pkl.load(f)
