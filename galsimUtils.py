@@ -6,7 +6,7 @@ import pickle as pkl
 from collections import defaultdict
 
 class galsim_dnl_dataset():
-    def __init__(self):#, ds_dict, n_shears):
+    def __init__(self):
         self.sigmas = defaultdict(dict) 
         self.fluxes = defaultdict(dict) 
         self.g1s = defaultdict(dict) 
@@ -15,7 +15,6 @@ class galsim_dnl_dataset():
         self.centroid_ys = defaultdict(dict) 
 
 def get_model_adc(): #plot_star_image
-
     dataset_file = '/home/r/rejnicho/analysis/adc/datasets/dnl/13144_R22_S00_dnl_dataset.pkl'
     amp = 'C00'
     with open(dataset_file, 'rb') as f:
