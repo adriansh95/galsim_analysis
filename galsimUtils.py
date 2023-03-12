@@ -2,6 +2,7 @@ import galsim
 import os
 import numpy as np
 import pickle as pkl
+import matplotlib.pyplot as plt
 
 from collections import defaultdict
 
@@ -14,8 +15,7 @@ class galsim_dnl_dataset():
         self.centroid_xs = defaultdict(dict) 
         self.centroid_ys = defaultdict(dict) 
 
-def get_model_adc():
-    dataset_file = '/home/r/rejnicho/analysis/adc/datasets/dnl/13144_R22_S00_dnl_dataset.pkl'
+def get_model_adc(dataset_file):
     amp = 'C00'
     with open(dataset_file, 'rb') as f:
         ds = pkl.load(f)
@@ -66,16 +66,15 @@ def make_blank_image(flux, g1, g2, seed=None):
     blank_image = galsim.Image(32, 32, scale=0.2, xmin=0, ymin=0, dtype=np.float64)  
     return blank_image, prof
 
-def plot_star_image(imDict, inshear, influx, im_num):
-    im_arr = im_dict[inshear][influx][im_num]
+def plot_star_image(imDict, inshear, influx, im_num, bins):
+    im_arr = imDict[inshear][influx][im_num]
 
-    # DNL bins
-    dnl_bins = get_model_adc()
     #ideal adc 
     star_image = galsim.Image(np.floor(im_arr), dtype=int, xmin=0, ymin=0) 
 
     #realistic adc 
-    adc_image = make_adc_image(im_arr, dnl_bins) #ISSUE IS HERE, with the function 
+    pedestal = 5e4 # Temp
+    adc_image = make_adc_image(im_arr, pedestal, bins) #ISSUE IS HERE, with the function 
     f, axs = plt.subplots(1, 3, figsize=(21,9))
     star_moments = star_image.FindAdaptiveMom(weight=None, strict=False)
     adc_moments = adc_image.FindAdaptiveMom(weight=None, strict=False)
@@ -96,15 +95,12 @@ def plot_star_image(imDict, inshear, influx, im_num):
 
     f.suptitle('Digitized Galaxy Images', fontsize=30)
     f.tight_layout()
-    filename = os.path.join(os.path.expanduser('~'), 'analysis/adc/plots/galsim/galaxy_new.png')
+    filename = os.path.join(os.path.expanduser('~'), 'analysis/adc/plots/galsim/ideal_dnl_galaxy_images.png')
     f.savefig(filename)
     plt.show()
 
-def write_star_images(input_fluxes, input_shears, n_ims=500):
+def write_star_images(input_fluxes, input_shears, fileName, n_ims=500):
     imDict = defaultdict(dict)
-    write_dir = 'analysis/adc/datasets/galsim/star_images'
-    fname = 'star_images.pkl'
-    filename = os.path.join(write_dir, fname)
 
     for inshear in input_shears:
         for influx in input_fluxes:
@@ -116,9 +112,9 @@ def write_star_images(input_fluxes, input_shears, n_ims=500):
                 star_image = make_star_image(iflux, g1, g2)
                 im_arrs[n] = star_image.array
 
-    with open(filename, 'wb') as f:
+    with open(fileName, 'wb') as f:
         pkl.dump(imDict, f)
-    print(f'Wrote {filename}')
+    print(f'Wrote {fileName}')
 
 def make_star_image(flux, g1, g2, seed=None):
     if seed:
@@ -136,7 +132,7 @@ def make_star_image(flux, g1, g2, seed=None):
     return star_image
 
 def make_adc_image(im_array, pedestal, adc_bins):
-    im_arr = np.digitize(im_array+pedestal, dnl_bins) - 1
+    im_arr = np.digitize(im_array+pedestal, adc_bins) - 1
 
     # subtract pedestal
     adc_image = galsim.Image(im_arr-pedestal, dtype=int, xmin=0, ymin=0)
